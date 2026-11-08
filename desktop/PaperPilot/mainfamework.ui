@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>mainfamework</class>
+ <widget class="QWidget" name="mainfamework">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1180</width>
+    <height>720</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>PaperPilot - 论文助手</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#mainfamework { background: #f8fbff; }
+QFrame#sidebar { background: #f4f8ff; border-right: 1px solid #e2e8f0; }
+QLabel#brandMark { color: #216df3; font-size: 34px; font-weight: 700; }
+QLabel#brandTitle { color: #0f1c4e; font-size: 25px; font-weight: 700; }
+QLabel#brandSlogan, QLabel#sectionTitle, QLabel#taskHint, QLabel#taskHint2, QLabel#contentHint { color: #71809d; }
+QPushButton[navButton=&quot;true&quot;] { border: none; border-radius: 9px; color: #26385e; font-size: 16px; font-weight: 600; min-height: 44px; padding-left: 16px; text-align: left; }
+QPushButton[navButton=&quot;true&quot;]:hover { background: #e6f0ff; }
+QPushButton[navButton=&quot;true&quot;]:checked { background: #dbeafe; color: #1769ed; }
+QPushButton#importButton { background: #216df3; border: none; border-radius: 9px; color: white; font-size: 16px; font-weight: 600; min-height: 48px; }
+QPushButton#importButton:hover { background: #155bd2; }
+QFrame#taskCard { background: white; border: 1px solid #e3eaf5; border-radius: 10px; }
+QLabel#pdfBadge { background: #ffe5e7; border-radius: 5px; color: #ed3c50; font-weight: 700; padding: 6px; }
+QLabel#taskTitle { color: #28385b; font-weight: 600; }
+QProgressBar { background: #eaf0fa; border: none; border-radius: 4px; height: 8px; text-align: center; }
+QProgressBar::chunk { background: #216df3; border-radius: 4px; }
+QPushButton#pushButton_exit { background: transparent; border: none; border-radius: 9px; color: #52627f; font-size: 15px; min-height: 40px; padding-left: 15px; text-align: left; }
+QPushButton#pushButton_exit:hover { background: #e6f0ff; color: #1769ed; }
+QFrame#contentPanel { background: white; }
+QLabel#contentTitle { color: #14234a; font-size: 28px; font-weight: 700; }
+QLabel#contentPlaceholder { background: #f8fbff; border: 1px dashed #bfd2ef; border-radius: 14px; color: #5c6d8d; font-size: 17px; }</string>
+  </property>
+  <layout class="QHBoxLayout" name="rootLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="sidebar">
+     <property name="minimumSize">
+      <size>
+       <width>280</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>280</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+     <layout class="QVBoxLayout" name="sidebarLayout">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="topMargin">
+       <number>24</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <property name="bottomMargin">
+       <number>20</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="brandLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="brandMark">
+          <property name="font">
+           <font>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>➤</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="brandTextLayout" stretch="0,0">
+          <property name="spacing">
+           <number>5</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="brandTitle">
+            <property name="text">
+             <string>PaperPilot</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="brandSlogan">
+            <property name="text">
+             <string>让论文阅读更高效</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="brandSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="navLibraryButton">
+        <property name="text">
+         <string>▣   论文库</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <property name="navButton" stdset="0">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="navAiButton">
+        <property name="text">
+         <string>◉   AI 助手</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="navButton" stdset="0">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="navNotesButton">
+        <property name="text">
+         <string>▤   阅读笔记</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="navButton" stdset="0">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="navTasksButton">
+        <property name="text">
+         <string>☷   任务中心 </string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="navButton" stdset="0">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="navSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>10</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="importButton">
+        <property name="text">
+         <string>＋  导入论文</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="taskSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>14</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="sectionTitle">
+        <property name="text">
+         <string>最近任务</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="taskCard">
+        <property name="frameShape">
+         <enum>QFrame::Shape::StyledPanel</enum>
+        </property>
+        <layout class="QVBoxLayout" name="taskCardLayout">
+         <property name="leftMargin">
+          <number>12</number>
+         </property>
+         <property name="topMargin">
+          <number>12</number>
+         </property>
+         <property name="rightMargin">
+          <number>12</number>
+         </property>
+         <property name="bottomMargin">
+          <number>12</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="taskTopLayout">
+           <item>
+            <widget class="QLabel" name="pdfBadge">
+             <property name="text">
+              <string>PDF</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QVBoxLayout" name="taskTextLayout">
+             <property name="spacing">
+              <number>2</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="taskTitle">
+               <property name="text">
+                <string>解析论文 PDF</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="taskHint">
+               <property name="text">
+                <string>Attention Is All You Need...</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="taskProgressBar">
+           <property name="value">
+            <number>68</number>
+           </property>
+           <property name="textVisible">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="taskBottomLayout">
+           <item>
+            <widget class="QLabel" name="taskHint2">
+             <property name="text">
+              <string>正在解析 PDF · 68%</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="taskBottomSpacer">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QLCDNumber" name="lcdNumber">
+             <property name="minimumSize">
+              <size>
+               <width>44</width>
+               <height>22</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>55</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="digitCount">
+              <number>3</number>
+             </property>
+             <property name="segmentStyle">
+              <enum>QLCDNumber::SegmentStyle::Flat</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <spacer name="bottomStretch">
+        <property name="orientation">
+         <enum>Qt::Orientation::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Expanding</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_exit">
+        <property name="text">
+         <string>⚙   退出登录</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <widget class="QWidget" name="layoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>1</y>
+        <width>891</width>
+        <height>721</height>
+       </rect>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QFrame" name="frame">
+         <property name="frameShape">
+          <enum>QFrame::Shape::Box</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Shadow::Raised</enum>
+         </property>
+         <widget class="QLabel" name="brandTitle_2">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>10</y>
+            <width>101</width>
+            <height>31</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>28</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>论文库</string>
+          </property>
+         </widget>
+         <widget class="QLineEdit" name="lineEdit">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>50</y>
+            <width>401</width>
+            <height>21</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="QScrollArea" name="scrollArea">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>120</y>
+            <width>401</width>
+            <height>581</height>
+           </rect>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>399</width>
+             <height>579</height>
+            </rect>
+           </property>
+           <layout class="QVBoxLayout" name="paperListLayout">
+            <property name="spacing">
+             <number>12</number>
+            </property>
+            <property name="leftMargin">
+             <number>10</number>
+            </property>
+            <property name="topMargin">
+             <number>10</number>
+            </property>
+            <property name="rightMargin">
+             <number>10</number>
+            </property>
+            <property name="bottomMargin">
+             <number>10</number>
+            </property>
+           </layout>
+          </widget>
+         </widget>
+         <widget class="QWidget" name="layoutWidget">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>80</y>
+            <width>271</width>
+            <height>21</height>
+           </rect>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="spacing">
+            <number>20</number>
+           </property>
+           <item>
+            <widget class="QComboBox" name="comboBox">
+             <item>
+              <property name="text">
+               <string>全部领域</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_2">
+             <item>
+              <property name="text">
+               <string>全部年份</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_3">
+             <item>
+              <property name="text">
+               <string>排序：最新</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_2">
+         <property name="frameShape">
+          <enum>QFrame::Shape::Box</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Shadow::Raised</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

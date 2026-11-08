@@ -1,0 +1,51 @@
+# ===== 构建产物 =====
+# CMake / 各 IDE 构建目录
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+compile_commands.json
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+Makefile
+_deps/
+Testing/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln.docstates
+x64/
+x86/
+[Dd]ebug/
+[Rr]elease/
+*.VC.db
+*.VC.VC.opendb
+*.tlog
+ipch/
+
+# Qt Creator
+.qtcreator/
+CMakeLists.txt.user
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.idea/
+
+# ===== 运行时数据与敏感配置 =====
+# 真实 API Key 等密钥，示例见 .env.example
+.env
+# 上传的 PDF 等运行时文件
+server/uploads/
+*.log

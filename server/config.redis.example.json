@@ -1,0 +1,15 @@
+{
+  "redis_clients": [
+    {
+      "name": "default",
+      "host": "127.0.0.1",
+      "port": 6379,
+      "username": "",
+      "passwd": "",
+      "db": 0,
+      "is_fast": false,
+      "number_of_connections": 1,
+      "timeout": 3.0
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "listeners": [
+    {
+      "address": "127.0.0.1",
+      "port": 8848,
+      "https": false
+    }
+  ],
+  "app": {
+    "enable_session": true,
+    "session_timeout": 3600,
+    "session_cookie_key": "MYAPPSESSION",
+    "client_max_body_size": "100M"
+  },
+  "redis_clients": [
+    {
+      "name": "default",
+      "host": "127.0.0.1",
+      "port": 6379,
+      "username": "",
+      "passwd": "",
+      "db": 0,
+      "is_fast": false,
+      "number_of_connections": 1,
+      "timeout": 3.0
+    }
+  ]
+}

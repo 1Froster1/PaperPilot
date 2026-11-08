@@ -1,0 +1,26 @@
+# HTTP Worker: Drogon calls this FastAPI service through HTTP.
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+pydantic>=2.0,<3.0
+httpx>=0.27,<1.0
+python-dotenv>=1.0,<2.0
+
+# Agent orchestration and the OpenAI-compatible chat-model client.
+langchain>=1.0,<2.0
+langgraph>=1.0,<2.0
+langchain-openai>=1.0,<2.0
+
+# Vector retrieval.  The implementation lives in app/vector_store.py.
+langchain-qdrant>=1.0,<2.0
+# The local Docker image currently runs Qdrant 1.18.x. Keep the client within
+# one minor version to avoid protocol-compatibility warnings.
+qdrant-client>=1.18,<1.20
+
+# PDF text extraction and direct GROBID REST/TEI XML metadata parsing.
+pymupdf>=1.24,<2.0
+requests>=2.32,<3.0
+beautifulsoup4>=4.12,<5.0
+lxml>=5.0,<7.0
+
+# Local tests.
+pytest>=8.0,<9.0
