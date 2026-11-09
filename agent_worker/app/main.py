@@ -26,9 +26,6 @@ from app.vector_service import (
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.INFO)
 
-#uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
-#docker run --rm --init --ulimit core=0 -p 8070:8070 --name paperpilot-grobid grobid/grobid:0.9.1-crf
-#docker run -d --name paperpilot-qdrant --restart unless-stopped -p 127.0.0.1:6335:6333 -p 127.0.0.1:6336:6334 -v paperpilot_qdrant_data:/qdrant/storage qdrant/qdrant:latest
 
 
 @asynccontextmanager

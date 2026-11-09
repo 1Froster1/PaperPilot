@@ -1,6 +1,12 @@
 from mcp.server.fastmcp import FastMCP
 import httpx
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# stdio MCP servers are separate Python processes, so load the Worker settings
+# explicitly instead of depending on inherited Uvicorn environment variables.
+load_dotenv(Path(__file__).resolve().parent.parent / "app" / ".env")
 
 mcp = FastMCP("paperpilot-openalex")
 

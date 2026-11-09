@@ -10,6 +10,7 @@ from langchain_core.messages import (
 from app.llm_service import create_chat_model
 from app.answer_validator import validate_answer
 from app.retrieval_service import format_citations
+from app.prompt_library import build_system_prompt
 from .state import PaperAgentState
 
 
@@ -19,25 +20,44 @@ def build_writer_messages(
     """只把 Research Agent 已经确认的证据交给 Writer。"""
     request = state["request"]
     citations = state.get("internal_citations", [])
+    external_references = state.get("external_references", [])
+    web_sources = state.get("web_sources", [])
 
     evidence_text = format_citations(citations)
 
-    # 这里后续替换为你已经完成的多 Prompt 函数：
-    # system_prompt = build_system_prompt(request.mode)
-    system_prompt = f"""
-你是 PaperPilot 的论文写作 Agent。
+    system_prompt = build_system_prompt(request.mode) + """
 
-当前任务模式：{request.mode}
-
-规则：
-1. 只能依据“当前论文证据”回答论文事实。
-2. 历史消息只用于理解用户当前问题中的指代。
-3. 不得调用工具，不得自行搜索外部资料。
-4. 证据不足时明确说明“当前检索到的论文证据不足以回答”。
-5. 每个事实性结论后必须标注【证据 n】。
-6. n 只能来自当前论文证据的编号。
-7. 默认使用中文回答。
+你是工作流中的 Writer Agent，只能根据下方给出的材料写作。
+当前论文的事实必须标注【证据 n】；外部检索到的书目信息必须标注
+【外部文献 n】；网络网页资料必须标注【网页来源 n】。
+网页资料和外部文献已经由 Research Agent 检索完成，应当在相关时使用它们。
+你不能自行调用工具；历史消息只用于理解指代，不能作为事实依据。
+不要编造未提供的论文、数据或结论。
 """
+
+    external_text = "未执行外部文献检索。"
+    if external_references:
+        external_text = "\n".join(
+            (
+                f"【外部文献 {index}】{reference.title}"
+                f"（{', '.join(reference.authors) or '作者未知'}，"
+                f"{reference.publication_year or '年份未知'}；"
+                f"{reference.venue or '来源未知'}；"
+                f"DOI: {reference.doi or '无'}）"
+            )
+            for index, reference in enumerate(external_references, start=1)
+        )
+
+    web_text = "未执行网络检索。"
+    if web_sources:
+        web_text = "\n\n".join(
+            (
+                f"【网页来源 {index}】{source.title}\n"
+                f"链接：{source.url}\n"
+                f"内容：{source.content}"
+            )
+            for index, source in enumerate(web_sources, start=1)
+        )
 
     paper_context = f"""
 当前论文：
@@ -47,6 +67,12 @@ def build_writer_messages(
 
 当前论文证据：
 {evidence_text}
+
+外部文献：
+{external_text}
+
+网页资料：
+{web_text}
 """
 
     messages: list[BaseMessage] = [
@@ -76,8 +102,10 @@ async def write_answer(
 ) -> dict:
     """Writer Agent：只根据 Research Agent 的内部论文证据生成答案。"""
     citations = state.get("internal_citations", [])
+    external_references = state.get("external_references", [])
+    web_sources = state.get("web_sources", [])
 
-    if not citations:
+    if not citations and not external_references and not web_sources:
         return {
             "draft_answer": "",
             "final_answer": "当前检索到的论文证据不足以回答这个问题。",
@@ -93,6 +121,8 @@ async def write_answer(
     validation = validate_answer(
         response.content,
         citations,
+        external_reference_count=len(external_references),
+        web_source_count=len(web_sources),
     )
 
     return {

@@ -42,6 +42,7 @@ add_executable(${PROJECT_NAME}
     main.${DEFAULT_SOURCE_EXTENSION}
     routes.cpp
     tools.cpp
+    runtime_config.cpp
     ${MYAPP_VIEW_SOURCE}
 )
 

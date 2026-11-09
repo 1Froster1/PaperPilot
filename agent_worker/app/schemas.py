@@ -37,6 +37,7 @@ class PaperChatRequest(BaseModel):
     request_id: str
     user_id: str
     paper_id: str
+    session_id: str | None = None
     question: str = Field(min_length=1, max_length=4000)
     paper: PaperContext
     conversation: list[dict[str, str]] = Field(default_factory=list)
@@ -52,6 +53,21 @@ class Citation(BaseModel):
     section: str | None = None
 
 
+class ExternalReference(BaseModel):
+    """A normalized external work returned by the OpenAlex Research Agent."""
+
+    source: str = "OpenAlex"
+    openalex_id: str = ""
+    title: str
+    authors: list[str] = Field(default_factory=list)
+    publication_year: int | None = None
+    venue: str | None = None
+    doi: str | None = None
+    cited_by_count: int = 0
+    is_open_access: bool = False
+    open_access_url: str | None = None
+
+
 class ToolTrace(BaseModel):
     """A record of one Agent tool call, useful for debugging and task logs."""
 
@@ -59,15 +75,27 @@ class ToolTrace(BaseModel):
     summary: str
 
 
+class WebSource(BaseModel):
+    """One normalized web source returned by Tavily."""
+
+    source: str = "Tavily"
+    title: str
+    url: str
+    content: str
+    score: float = 0.0
+    published_date: str | None = None
+
 class PaperChatResponse(BaseModel):
     """Response returned to Drogon, then forwarded to Qt."""
 
     success: bool = True
     answer: str
     citations: list[Citation] = Field(default_factory=list)
+    external_references: list[ExternalReference] = Field(default_factory=list)
     tools: list[ToolTrace] = Field(default_factory=list)
+    session_id: str | None = None
     status: Literal["completed", "failed"] = "completed"#`Literal["completed", "failed"]`：字面量类型，代表这个字段**只能是这两个字符串二选一**，传别的值 Pydantic 直接校验报错
-
+    web_sources: list[WebSource] = Field(default_factory=list)
 
 class PdfParseRequest(BaseModel):
     """Internal request sent by Drogon after it has saved an uploaded PDF."""
@@ -158,3 +186,4 @@ class VectorHealthResponse(BaseModel):
     vector_size: int
     distance: str
     detail: str = ""
+

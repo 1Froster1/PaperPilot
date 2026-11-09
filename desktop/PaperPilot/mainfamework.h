@@ -78,6 +78,9 @@ class mainfamework : public QWidget
     QLabel *detailAbstract_{};//增加“摘要控件指针”
     QString currentPaperId_;
     QString currentPaperTitle_;
+    // 服务端创建后返回；同一篇论文的连续提问会复用这个会话。
+    QString chatSessionId_;
+    QString chatSessionPaperId_;
 };
 
 #endif  // MAINFAMEWORK_H

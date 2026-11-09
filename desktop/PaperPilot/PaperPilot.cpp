@@ -1,4 +1,5 @@
 #include "PaperPilot.h"
+#include "backend_config.h"
 #include "mainfamework.h"
 
 #include "ui_PaperPilot.h"
@@ -41,11 +42,8 @@ PaperPilot::~PaperPilot()
 
 void PaperPilot::login()
 {
-    // const QString account = ui_->line_account->text().trimmed();
-    // const QString password = ui_->line_password->text();
-
-    const QString account = "123456";
-    const QString password = "123456";
+    const QString account = ui_->line_account->text().trimmed();
+    const QString password = ui_->line_password->text();
 
     if (account.isEmpty() || password.isEmpty())
     {
@@ -59,7 +57,17 @@ void PaperPilot::login()
     requestBody["account"] = account;
     requestBody["password"] = password;
 
-    QNetworkRequest request(QUrl("http://127.0.0.1:8848/api/auth/login"));//把这个网址包装成 网络请求
+    const QString serverBaseUrl = backendBaseUrl();
+    if (serverBaseUrl.isEmpty())
+    {
+        QMessageBox::warning(
+            this,
+            QStringLiteral("无法登录"),
+            QStringLiteral("缺少 desktop.local.json，请从 desktop.local.example.json 复制并配置后端地址。"));
+        return;
+    }
+
+    QNetworkRequest request(QUrl(serverBaseUrl + "/api/auth/login"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");//给请求设置 HTTP 请求头：Content-Type: application/json
 
     // post() 不会卡住界面；网络完成后，下面的 finished 信号才会触发。
@@ -91,7 +99,7 @@ void PaperPilot::login()
             QMessageBox::warning(
                 this,
                 QStringLiteral("无法登录"),
-                QStringLiteral("请求 Drogon 服务失败：%1\n请确认 myapp 正在运行在 127.0.0.1:8848。")
+                QStringLiteral("请求 Drogon 服务失败：%1\n请确认后端服务正在运行。")
                     .arg(networkError));
             return;
         }

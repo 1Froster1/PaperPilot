@@ -46,6 +46,10 @@ venv/
 # ===== 运行时数据与敏感配置 =====
 # 真实 API Key 等密钥，示例见 .env.example
 .env
+# Machine-specific service credentials and addresses. Commit only the .example
+# files beside them.
+server/config.local.json
+desktop/PaperPilot/desktop.local.json
 # 上传的 PDF 等运行时文件
 server/uploads/
 *.log

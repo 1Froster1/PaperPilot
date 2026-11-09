@@ -38,6 +38,27 @@ _openalex_tools: list[BaseTool] | None = None
 _load_lock = asyncio.Lock()
 
 
+WEB_SEARCH_SERVER_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "mcp_servers"
+    / "web_search_server.py"
+)
+
+_web_mcp_client = MultiServerMCPClient(
+    {
+        "tavily": {
+            "command": sys.executable,
+            "args": [str(WEB_SEARCH_SERVER_PATH)],
+            "transport": "stdio",
+        }
+    },
+    tool_name_prefix=True,
+)
+
+_web_search_tools: list[BaseTool] | None = None
+_web_load_lock = asyncio.Lock()
+
+
 async def get_openalex_tools() -> list[BaseTool]:
     """Load and cache OpenAlex MCP tools as LangChain tools.
 
@@ -78,3 +99,39 @@ async def get_openalex_tools() -> list[BaseTool]:
             _openalex_tools = []
 
     return list(_openalex_tools)
+
+async def get_web_search_tools() -> list[BaseTool]:
+    """加载并缓存 Tavily 网络检索 MCP 工具。"""
+
+    global _web_search_tools
+
+    if _web_search_tools is not None:
+        return list(_web_search_tools)
+
+    async with _web_load_lock:
+        if _web_search_tools is not None:
+            return list(_web_search_tools)
+
+        if not WEB_SEARCH_SERVER_PATH.is_file():
+            logger.error(
+                "Web search MCP server file does not exist: %s",
+                WEB_SEARCH_SERVER_PATH,
+            )
+            _web_search_tools = []
+            return []
+
+        try:
+            tools = await _web_mcp_client.get_tools()
+
+            _web_search_tools = list(tools)
+
+            logger.info(
+                "Loaded Tavily MCP tools: %s",
+                [tool.name for tool in _web_search_tools],
+            )
+
+        except Exception:
+            logger.exception("Failed to load Tavily MCP tools.")
+            _web_search_tools = []
+
+    return list(_web_search_tools)

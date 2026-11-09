@@ -11,6 +11,11 @@ def research_current_paper(
     """Research Agent 第一版：只检索当前论文的 Qdrant 证据。"""
     request = state["request"]
 
+    if "internal" not in state.get("research_plan", ["internal"]):
+        return {
+            "research_summary": "本轮不需要检索当前论文。",
+        }
+
     citations = retrieve_paper_evidence(
         paper_id=request.paper_id,
         query=request.question,

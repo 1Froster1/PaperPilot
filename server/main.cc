@@ -1,6 +1,8 @@
 #include <drogon/drogon.h>
 #include <mysql.h>
+#include <exception>
 #include <stdio.h>  //mysql 文件
+#include "runtime_config.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,6 +16,7 @@ MYSQL_ROW row;   // 记录结构体
 
 int initMysqlConnection()
 {
+    const auto &config = serverRuntimeConfig();
     // 初始化数据库
     mysql_init(&mysql);
 
@@ -22,10 +25,11 @@ int initMysqlConnection()
     // Incorrect string value。
     mysql_options(&mysql, MYSQL_SET_CHARSET_NAME, "utf8mb4");
 
-    // 连接数据库
-    // 这里需要输入自己的本机名和密码，若全为默认，只需更改*处为自己的密码以及”xsgl“处改成自己创建的数据库即可
+    // Credentials live only in ignored config.local.json.
     if (mysql_real_connect(
-            &mysql, "127.0.0.1", "root", "123456", "paper", 3306, NULL, 0) ==
+            &mysql, config.databaseHost.c_str(), config.databaseUser.c_str(),
+            config.databasePassword.c_str(), config.databaseName.c_str(),
+            config.databasePort, NULL, 0) ==
         NULL)
     {
         printf("错误原因: %s\n", mysql_error(&mysql));
@@ -54,6 +58,16 @@ int main()
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
+
+    try
+    {
+        loadServerRuntimeConfig("config.local.json");
+    }
+    catch (const std::exception &error)
+    {
+        fprintf(stderr, "Server configuration error: %s\n", error.what());
+        return 1;
+    }
 
     initMysqlConnection();
     // 注册普通路由；HttpController 控制器由 Drogon 自动注册。

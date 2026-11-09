@@ -207,6 +207,8 @@ async def run_paper_agent(request: PaperChatRequest) -> PaperChatResponse:
             answer="论文 Agent 执行失败，请稍后重试。",
         )
     citations = final_state.get("internal_citations", [])
+    external_references = final_state.get("external_references", [])
+    web_sources = final_state.get("web_sources", [])
     tool_traces = final_state.get("tool_traces", [])
     answer = final_state.get("final_answer", "").strip()
     if not answer:
@@ -232,6 +234,8 @@ async def run_paper_agent(request: PaperChatRequest) -> PaperChatResponse:
         status="completed",
         answer=answer,
         citations=citations,
+        external_references=external_references,
+        web_sources=web_sources,
         tools=tool_traces,
     )
     # retrieval_started_at = time.perf_counter()

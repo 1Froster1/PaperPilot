@@ -1,4 +1,5 @@
 #include "mainfamework.h"
+#include "backend_config.h"
 #include "PaperPilot.h"
 #include "ui_mainfamework.h"
 #include <QButtonGroup>
@@ -449,7 +450,7 @@ void mainfamework::buildChatDemo()
         chatInput_->setEnabled(false);
         modeSelector->setEnabled(false);
 
-        QNetworkRequest request(QUrl("http://127.0.0.1:8848/api/papers/" +
+        QNetworkRequest request(QUrl(backendBaseUrl() + "/api/papers/" +
                                      currentPaperId_ +
                                      "/chat"));//把这个网址包装成 网络请求
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");//给请求设置 HTTP 请求头：Content-Type: application/json
@@ -457,6 +458,13 @@ void mainfamework::buildChatDemo()
         QJsonObject requestBody;
         requestBody["question"] = question;
         requestBody["mode"] = modeSelector->currentData().toString();
+        if (chatSessionPaperId_ != currentPaperId_)
+        {
+            chatSessionPaperId_ = currentPaperId_;
+            chatSessionId_.clear();
+        }
+        if (!chatSessionId_.isEmpty())
+            requestBody["session_id"] = chatSessionId_;
 
 
         QNetworkReply *reply = networkManager_->post(
@@ -517,9 +525,60 @@ void mainfamework::buildChatDemo()
 
                     if (responseBody["success"].toBool() && !answer.isEmpty())
                     {
+                        const QString returnedSessionId =
+                            responseBody["session_id"].toString();
+                        if (!returnedSessionId.isEmpty())
+                            chatSessionId_ = returnedSessionId;
+
                         chatMessagesLayout_->insertWidget(
                             chatMessagesLayout_->count() - 1,
                             createChatRow(answer, false, messageArea));
+
+                        const QJsonArray externalReferences =
+                            responseBody["external_references"].toArray();
+                        if (!externalReferences.isEmpty())
+                        {
+                            QStringList lines;
+                            lines << QStringLiteral("OpenAlex 外部文献：");
+                            for (int index = 0; index < externalReferences.size(); ++index)
+                            {
+                                const QJsonObject reference =
+                                    externalReferences.at(index).toObject();
+                                const QJsonArray authors =
+                                    reference["authors"].toArray();
+                                QStringList authorNames;
+                                for (const QJsonValue &author : authors)
+                                    authorNames << author.toString();
+                                lines << QStringLiteral("【外部文献 %1】%2（%3，%4）")
+                                             .arg(index + 1)
+                                             .arg(reference["title"].toString())
+                                             .arg(authorNames.join(QStringLiteral(", ")))
+                                             .arg(reference["publication_year"].toVariant().toString());
+                            }
+                            chatMessagesLayout_->insertWidget(
+                                chatMessagesLayout_->count() - 1,
+                                createChatRow(lines.join('\n'), false, messageArea));
+                        }
+
+                        const QJsonArray webSources =
+                            responseBody["web_sources"].toArray();
+                        if (!webSources.isEmpty())
+                        {
+                            QStringList lines;
+                            lines << QStringLiteral("网络网页来源：");
+                            for (int index = 0; index < webSources.size(); ++index)
+                            {
+                                const QJsonObject source =
+                                    webSources.at(index).toObject();
+                                lines << QStringLiteral("【网页来源 %1】%2\n%3")
+                                             .arg(index + 1)
+                                             .arg(source["title"].toString())
+                                             .arg(source["url"].toString());
+                            }
+                            chatMessagesLayout_->insertWidget(
+                                chatMessagesLayout_->count() - 1,
+                                createChatRow(lines.join('\n'), false, messageArea));
+                        }
                         scrollChatToBottom();
                         return;
                     }
@@ -555,7 +614,7 @@ void mainfamework::loadPapers()
         delete item;
     }
 
-    QUrl url("http://127.0.0.1:8848/api/papers");
+    QUrl url(backendBaseUrl() + "/api/papers");
     QUrlQuery query;
     query.addQueryItem("page", "1");
     query.addQueryItem("pageSize", "50");
@@ -595,7 +654,7 @@ void mainfamework::loadPapers()
             QMessageBox::warning(
                 this,
                 QStringLiteral("无法连接"),
-                QStringLiteral("请求 Drogon 服务失败：%1\n请确认 myapp 正在运行在 127.0.0.1:8848。")
+            QStringLiteral("请求 Drogon 服务失败：%1\n请确认后端服务正在运行。")
                     .arg(networkError));
             return;
         }
@@ -706,7 +765,7 @@ void mainfamework::loadPapers()
 void mainfamework::loadPaperDetail(const QString &paperId)
 {
     QNetworkRequest request(
-        QUrl(QStringLiteral("http://127.0.0.1:8848/api/papers/") + paperId));
+        QUrl(backendBaseUrl() + QStringLiteral("/api/papers/") + paperId));
 
     QNetworkReply *reply = networkManager_->get(request);
 
@@ -836,7 +895,7 @@ void mainfamework::showNotesDialog()
     auto refreshNotes = std::make_shared<std::function<void()>>();
     *refreshNotes = [this, dialog, paperId, noteList, editor, deleteButton] {
         QNetworkRequest request(
-            QUrl(QStringLiteral("http://127.0.0.1:8848/api/papers/") +
+            QUrl(backendBaseUrl() + QStringLiteral("/api/papers/") +
                  paperId + QStringLiteral("/notes")));
         QNetworkReply *reply = networkManager_->get(request);
         connect(reply, &QNetworkReply::finished, dialog, [noteList, editor, deleteButton, reply] {
@@ -903,10 +962,10 @@ void mainfamework::showNotesDialog()
                 const auto *selectedItem = noteList->currentItem();
                 const bool isUpdate = selectedItem != nullptr;
                 if (isUpdate)
-                    request.setUrl(QUrl(QStringLiteral("http://127.0.0.1:8848/api/notes/") +
+                    request.setUrl(QUrl(backendBaseUrl() + QStringLiteral("/api/notes/") +
                                         selectedItem->data(Qt::UserRole).toString()));
                 else
-                    request.setUrl(QUrl(QStringLiteral("http://127.0.0.1:8848/api/papers/") +
+                    request.setUrl(QUrl(backendBaseUrl() + QStringLiteral("/api/papers/") +
                                         paperId + QStringLiteral("/notes")));
                 request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -944,7 +1003,7 @@ void mainfamework::showNotesDialog()
                     return;
 
                 QNetworkRequest request(
-                    QUrl(QStringLiteral("http://127.0.0.1:8848/api/notes/") +
+                    QUrl(backendBaseUrl() + QStringLiteral("/api/notes/") +
                          selectedItem->data(Qt::UserRole).toString()));
                 QNetworkReply *reply = networkManager_->deleteResource(request);
                 connect(reply, &QNetworkReply::finished, dialog, [this, reply, refreshNotes] {
@@ -982,7 +1041,7 @@ void mainfamework::deletePaper(const QString &paperId, const QString &title)
         return;
 
     QNetworkRequest request(
-        QUrl(QStringLiteral("http://127.0.0.1:8848/api/papers/") + paperId));
+        QUrl(backendBaseUrl() + QStringLiteral("/api/papers/") + paperId));
     QNetworkReply *reply = networkManager_->deleteResource(request);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply] {
@@ -1019,7 +1078,7 @@ void mainfamework::toggleFavorite(const QString &paperId, bool favorite)
     QJsonObject requestBody;
     requestBody["favorite"] = favorite;
     QNetworkRequest request(
-        QUrl(QStringLiteral("http://127.0.0.1:8848/api/papers/") +
+        QUrl(backendBaseUrl() + QStringLiteral("/api/papers/") +
              paperId + QStringLiteral("/favorite")));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -1073,7 +1132,7 @@ void mainfamework::showTasksDialog()
     // 它让下面的 lambda 可以安全地引用同一个“刷新任务列表”的函数。
     auto refreshTasks = std::make_shared<std::function<void()>>();
     *refreshTasks = [this, table] {
-        QNetworkRequest request(QUrl(QStringLiteral("http://127.0.0.1:8848/api/tasks")));
+        QNetworkRequest request(QUrl(backendBaseUrl() + QStringLiteral("/api/tasks")));
         QNetworkReply *reply = networkManager_->get(request);
         connect(reply, &QNetworkReply::finished, this, [table, reply] {
             const int httpStatus =
@@ -1245,7 +1304,7 @@ void mainfamework::on_importButton_clicked()
 
     // 发起 POST 请求
     QNetworkRequest request(
-        QUrl(QStringLiteral("http://127.0.0.1:8848/api/papers")));
+        QUrl(backendBaseUrl() + QStringLiteral("/api/papers")));
 
     QNetworkReply *reply = networkManager_->post(request, multiPart);
 
@@ -1309,7 +1368,7 @@ void mainfamework::on_importButton_clicked()
         connect(timer, &QTimer::timeout, this, [this, taskId, timer]() {
 
             QNetworkRequest request(
-                QUrl("http://127.0.0.1:8848/api/tasks/" + taskId)
+                QUrl(backendBaseUrl() + "/api/tasks/" + taskId)
                 );
 
             QNetworkReply *reply = networkManager_->get(request);

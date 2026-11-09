@@ -40,5 +40,15 @@ void advanceRunningTasks(MYSQL *mysql);
 bool savePaperChatTurn(MYSQL *mysql,
                        const std::string &paperId,
                        const std::string &userId,
+                       const std::string &sessionId,
+                       const std::string &requestId,
                        const std::string &question,
                        const Json::Value &workerResult);
+bool createPaperChatSession(MYSQL *mysql,
+                            const std::string &paperId,
+                            const std::string &userId,
+                            std::string &sessionId);
+bool validatePaperChatSession(MYSQL *mysql,
+                              const std::string &paperId,
+                              const std::string &userId,
+                              const std::string &sessionId);

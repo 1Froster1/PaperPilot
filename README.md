@@ -171,35 +171,39 @@ uvicorn app.main:app --host 127.0.0.1 --port 8001
 
 ```powershell
 cd server
+copy config.local.example.json config.local.json  # 填入本机 MySQL 与 Worker 地址
 cmake -B build -G "Visual Studio 17 2022" -A x64 \
       -DDrogon_DIR=D:/path/to/drogon/_install/lib/cmake/Drogon
 cmake --build build --config Debug
-build\Debug\myapp.exe     # 工作目录须为 server/，config.json 为相对路径
+build\Debug\myapp.exe     # 工作目录须为 server/，配置文件为相对路径
 ```
 
-可选 CMake 开关：`MYAPP_REDIS_READY`（默认 ON，控制 Redis 示例端点编译）。MySQL 连接参数目前硬编码在 `main.cc` 中（`127.0.0.1`、`root/123456`、库 `paper`）。
+可选 CMake 开关：`MYAPP_REDIS_READY`（默认 ON，控制 Redis 示例端点编译）。MySQL 与 Python Worker 地址由 `config.local.json` 读取。
 
 ### 5. 构建桌面端
 
 ```powershell
 cd desktop
+copy PaperPilot\desktop.local.example.json PaperPilot\desktop.local.json
 cmake -B build -DCMAKE_PREFIX_PATH=D:/Qt/6.12.0/msvc2022_64
 cmake --build build --config Debug
 ```
 
-或用 Qt Creator / Visual Studio（`PaperPilot.sln`）直接打开构建。后端地址硬编码为 `http://127.0.0.1:8848`。
+或用 Qt Creator / Visual Studio（`PaperPilot.sln`）直接打开构建。构建时会把本地桌面配置复制到可执行文件目录。
 
 ### 6. 使用
 
-启动桌面端 → 登录（演示账号 `123456` / `123456`）→ 导入 PDF → 等待解析完成 → 在「AI 助手」中选择模式开始提问。
+启动桌面端 → 使用数据库中的账号登录 → 导入 PDF → 等待解析完成 → 在「AI 助手」中选择模式开始提问。
 
 ## 配置说明
 
 | 文件 | 说明 |
 |---|---|
 | `server/config.json` | 后端监听端口、Session、Redis 连接、请求体大小限制 |
+| `server/config.local.example.json` | 后端本地 MySQL 与 Python Worker 配置模板；复制为 `config.local.json` 后填写，禁止提交 |
 | `server/config.redis.example.json` | Redis 客户端配置示例 |
-| `agent_worker/app/.env.example` | Worker 环境变量模板（LLM / Embedding / Qdrant / GROBID / OpenAlex），复制为 `.env` 使用 |
+| `desktop/PaperPilot/desktop.local.example.json` | Qt 桌面端后端地址模板；复制为 `desktop.local.json`，禁止提交 |
+| `agent_worker/app/.env.example` | Worker 环境变量模板（LLM / Embedding / Qdrant / GROBID / OpenAlex / Tavily），复制为 `.env` 使用 |
 
 ## 注意事项
 

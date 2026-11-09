@@ -22,6 +22,7 @@ qt_add_executable(PaperPilot
     PaperPilot/PaperPilot.ui
     PaperPilot/PaperPilot.qrc
     PaperPilot/mainfamework.h PaperPilot/mainfamework.cpp PaperPilot/mainfamework.ui
+    PaperPilot/backend_config.h PaperPilot/backend_config.cpp
 
 )
 
@@ -39,3 +40,12 @@ endif()
 set_target_properties(PaperPilot PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
+
+# Keep machine-specific runtime configuration beside the desktop executable
+# during local development, without ever adding it to Git.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PaperPilot/desktop.local.json")
+    add_custom_command(TARGET PaperPilot POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/PaperPilot/desktop.local.json"
+            "$<TARGET_FILE_DIR:PaperPilot>/desktop.local.json")
+endif()

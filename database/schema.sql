@@ -259,5 +259,27 @@ CREATE TABLE IF NOT EXISTS `paper_chat_messages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='论文 AI 对话消息与引用记录';
 
+-- Upgrade databases created before chat sessions and Agent traces existed.
+CALL paperpilot_add_column_if_absent(
+    'paper_chat_messages', 'session_id',
+    'CHAR(36) CHARACTER SET ascii DEFAULT NULL'
+);
+CALL paperpilot_add_column_if_absent(
+    'paper_chat_messages', 'request_id',
+    "VARCHAR(64) DEFAULT NULL COMMENT '一次 Python Agent 调用的链路追踪 ID'"
+);
+CALL paperpilot_add_column_if_absent(
+    'paper_chat_messages', 'tool_traces_json',
+    "JSON DEFAULT NULL COMMENT 'Agent ToolTrace 数组'"
+);
+CALL paperpilot_add_index_if_absent(
+    'paper_chat_messages', 'idx_chat_messages_session_created',
+    '(`session_id`, `created_at`)'
+);
+CALL paperpilot_add_index_if_absent(
+    'paper_chat_messages', 'idx_chat_messages_request',
+    '(`request_id`)'
+);
+
 DROP PROCEDURE IF EXISTS `paperpilot_add_column_if_absent`;
 DROP PROCEDURE IF EXISTS `paperpilot_add_index_if_absent`;

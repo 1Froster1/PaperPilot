@@ -1038,6 +1038,7 @@ void initRoutes(MYSQL *mysql)
             }
 
             std::string mode = "qa";
+            std::string requestedSessionId;
             if ((*json).isMember("mode"))
             {
                 if (!(*json)["mode"].isString())
@@ -1063,6 +1064,22 @@ void initRoutes(MYSQL *mysql)
                 response->setStatusCode(k400BadRequest);
                 callback(response);
                 return;
+            }
+
+            if ((*json).isMember("session_id"))
+            {
+                if (!(*json)["session_id"].isString() ||
+                    (*json)["session_id"].asString().size() > 36)
+                {
+                    Json::Value body;
+                    body["success"] = false;
+                    body["message"] = "session_id must be a UUID string";
+                    auto response = HttpResponse::newHttpJsonResponse(body);
+                    response->setStatusCode(k400BadRequest);
+                    callback(response);
+                    return;
+                }
+                requestedSessionId = (*json)["session_id"].asString();
             }
 
             LOG_INFO << "解析聊天请求头完成";
@@ -1129,6 +1146,27 @@ void initRoutes(MYSQL *mysql)
             agentRequest["user_id"] = "1";
             agentRequest["paper_id"] = paperId;
             agentRequest["mode"] = mode;
+            const std::string userId = "1";
+            std::string sessionId = requestedSessionId;
+            if (sessionId.empty())
+            {
+                if (!createPaperChatSession(mysql, paperId, userId, sessionId))
+                {
+                    sendDatabaseError(callback, mysql);
+                    return;
+                }
+            }
+            else if (!validatePaperChatSession(mysql, paperId, userId, sessionId))
+            {
+                Json::Value body;
+                body["success"] = false;
+                body["message"] = "chat session not found";
+                auto response = HttpResponse::newHttpJsonResponse(body);
+                response->setStatusCode(k404NotFound);
+                callback(response);
+                return;
+            }
+            agentRequest["session_id"] = sessionId;
 
             const std::string question = (*json)["question"].asString();
             agentRequest["question"] = question;
@@ -1144,13 +1182,13 @@ void initRoutes(MYSQL *mysql)
 
             Json::Value conversation{Json::arrayValue};
 
-            const std::string userId = "1";
             const std::string historySql =
                 "SELECT role, content FROM ("
                 "SELECT id, role, content "
                 "FROM paper_chat_messages "
                 "WHERE paper_id = " +
-                paperId + " AND user_id = " + userId +
+                paperId + " AND user_id = " + userId + " AND session_id = '" +
+                escapeSql(mysql, sessionId) + "'" +
                 " ORDER BY id DESC LIMIT 10"
                 ") AS recent_messages ORDER BY id ASC";
             
@@ -1186,19 +1224,24 @@ void initRoutes(MYSQL *mysql)
 
             LOG_INFO << "构造agent请求头完成";
 
+            const std::string requestId = agentRequest["request_id"].asString();
             sendMessageToAgent(
                 agentRequest,
-                [mysql, callback, paperId, userId, question](
+                [mysql, callback, paperId, userId, sessionId, requestId, question](
                     const Json::Value &workerResult) {
-                    
                     bool success = workerResult.get("success", false).asBool();
-                    if (success && !savePaperChatTurn(mysql, paperId, userId, question, workerResult))
+                    if (success && !savePaperChatTurn(
+                                       mysql, paperId, userId, sessionId, requestId,
+                                       question, workerResult))
                     {
                         LOG_ERROR << "Agent 已成功回答，但聊天记录写入失败。";
                     }
 
+                    Json::Value responseResult = workerResult;
+                    responseResult["session_id"] = sessionId;
+
                     auto response =
-                        HttpResponse::newHttpJsonResponse(workerResult);
+                        HttpResponse::newHttpJsonResponse(responseResult);
 
                     callback(response);
                 },

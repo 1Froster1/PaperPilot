@@ -1,4 +1,5 @@
 #include "tools.h"
+#include "runtime_config.h"
 #include <algorithm>
 #include <cstdlib>
 #include <sstream>
@@ -36,7 +37,7 @@ void markPdfParseFailed(MYSQL *mysql, const std::string &taskId,
 void startPaperVectorIndex(MYSQL *mysql, const std::string &taskId,
                            const std::string &paperId, const Json::Value &indexRequest)
 {
-    auto client = HttpClient::newHttpClient("http://127.0.0.1:8001");
+    auto client = HttpClient::newHttpClient(serverRuntimeConfig().agentWorkerBaseUrl);
     auto request = HttpRequest::newHttpRequest();
     request->setMethod(Post);
     request->setPath("/worker/index-paper");
@@ -72,7 +73,7 @@ void startPdfParseTask(MYSQL *mysql, std::string taskId, std::string paperId, st
     body["task_id"] = taskId;
     body["paper_id"] = paperId;
     body["pdf_path"] = absolutePdfPath;
-    auto client = HttpClient::newHttpClient("http://127.0.0.1:8001");
+    auto client = HttpClient::newHttpClient(serverRuntimeConfig().agentWorkerBaseUrl);
     auto request = HttpRequest::newHttpRequest();
     request->setMethod(Post);
     request->setPath("/worker/parse-pdf");
@@ -146,7 +147,7 @@ void sendMessageToAgent(const Json::Value &agentMessages,
                         std::function<void(const Json::Value &)> onSuccess,
                         std::function<void(const std::string &)> onError)
 {
-    auto client = HttpClient::newHttpClient("http://127.0.0.1:8001");
+    auto client = HttpClient::newHttpClient(serverRuntimeConfig().agentWorkerBaseUrl);
     auto request = HttpRequest::newHttpRequest();
     request->setMethod(Post);
     request->setPath("/agent/paper-chat");
@@ -207,24 +208,39 @@ void advanceRunningTasks(MYSQL *mysql)
 bool savePaperChatTurn(MYSQL *mysql,
                        const std::string &paperId,
                        const std::string &userId,
+                       const std::string &sessionId,
+                       const std::string &requestId,
                        const std::string &question,
                        const Json::Value &workerResult)
 {
     const std::string answer = workerResult["answer"].asString();
 
-    Json::Value citations{Json::arrayValue};
+    Json::Value citations{Json::objectValue};
     if (workerResult.isMember("citations") &&
         workerResult["citations"].isArray())
     {
-        citations = workerResult["citations"];
+        citations["internal"] = workerResult["citations"];
     }
-
-    const std::string safeQuestion = escapeSql(mysql, question);
-    const std::string safeAnswer = escapeSql(mysql, answer);
-    const std::string safeCitations =
-        escapeSql(mysql, citations.toStyledString());
+    else citations["internal"] = Json::arrayValue;
+    if (workerResult.isMember("external_references") &&
+        workerResult["external_references"].isArray())
+        citations["external"] = workerResult["external_references"];
+    else citations["external"] = Json::arrayValue;
+    if (workerResult.isMember("web_sources") &&
+        workerResult["web_sources"].isArray())
+        citations["web"] = workerResult["web_sources"];
+    else citations["web"] = Json::arrayValue;
 
     std::lock_guard<std::mutex> lock(mysqlMutex);
+    const std::string safeQuestion = escapeSql(mysql, question);
+    const std::string safeAnswer = escapeSql(mysql, answer);
+    const std::string safeSessionId = escapeSql(mysql, sessionId);
+    const std::string safeRequestId = escapeSql(mysql, requestId);
+    const std::string safeCitations =
+        escapeSql(mysql, citations.toStyledString());
+    const std::string safeToolTraces = escapeSql(
+        mysql,
+        workerResult.get("tools", Json::Value(Json::arrayValue)).toStyledString());
 
     if (mysql_query(mysql, "START TRANSACTION") != 0)
     {
@@ -234,17 +250,24 @@ bool savePaperChatTurn(MYSQL *mysql,
 
     const std::string insertUserSql =
         "INSERT INTO paper_chat_messages "
-        "(paper_id, user_id, role, content, citations_json) VALUES (" +
-        paperId + ", " + userId + ", 'user', '" + safeQuestion + "', NULL)";
+        "(paper_id, user_id, session_id, request_id, role, content, citations_json) VALUES (" +
+        paperId + ", " + userId + ", '" + safeSessionId + "', '" +
+        safeRequestId + "', 'user', '" + safeQuestion + "', NULL)";
 
     const std::string insertAssistantSql =
         "INSERT INTO paper_chat_messages "
-        "(paper_id, user_id, role, content, citations_json) VALUES (" +
-        paperId + ", " + userId + ", 'assistant', '" + safeAnswer + "', '" +
-        safeCitations + "')";
+        "(paper_id, user_id, session_id, request_id, role, content, citations_json, tool_traces_json) VALUES (" +
+        paperId + ", " + userId + ", '" + safeSessionId + "', '" +
+        safeRequestId + "', 'assistant', '" + safeAnswer + "', '" +
+        safeCitations + "', '" + safeToolTraces + "')";
+
+    const std::string updateSessionSql =
+        "UPDATE paper_chat_sessions SET updated_at = NOW() WHERE id = '" +
+        safeSessionId + "'";
 
     if (mysql_query(mysql, insertUserSql.c_str()) != 0 ||
-        mysql_query(mysql, insertAssistantSql.c_str()) != 0)
+        mysql_query(mysql, insertAssistantSql.c_str()) != 0 ||
+        mysql_query(mysql, updateSessionSql.c_str()) != 0)
     {
         LOG_ERROR << "写入聊天记录失败: " << mysql_error(mysql);
         mysql_query(mysql, "ROLLBACK");
@@ -259,4 +282,46 @@ bool savePaperChatTurn(MYSQL *mysql,
     }
 
     return true;
+}
+
+bool createPaperChatSession(MYSQL *mysql,
+                            const std::string &paperId,
+                            const std::string &userId,
+                            std::string &sessionId)
+{
+    if (mysql_query(mysql, "SELECT UUID()") != 0)
+        return false;
+    MYSQL_RES *result = mysql_store_result(mysql);
+    if (!result)
+        return false;
+    MYSQL_ROW row = mysql_fetch_row(result);
+    sessionId = row && row[0] ? row[0] : "";
+    mysql_free_result(result);
+    if (sessionId.empty())
+        return false;
+
+    const std::string safeSessionId = escapeSql(mysql, sessionId);
+    const std::string sql =
+        "INSERT INTO paper_chat_sessions (id, user_id, paper_id) VALUES ('" +
+        safeSessionId + "', " + userId + ", " + paperId + ")";
+    return mysql_query(mysql, sql.c_str()) == 0;
+}
+
+bool validatePaperChatSession(MYSQL *mysql,
+                              const std::string &paperId,
+                              const std::string &userId,
+                              const std::string &sessionId)
+{
+    const std::string safeSessionId = escapeSql(mysql, sessionId);
+    const std::string sql =
+        "SELECT id FROM paper_chat_sessions WHERE id = '" + safeSessionId +
+        "' AND paper_id = " + paperId + " AND user_id = " + userId + " LIMIT 1";
+    if (mysql_query(mysql, sql.c_str()) != 0)
+        return false;
+    MYSQL_RES *result = mysql_store_result(mysql);
+    if (!result)
+        return false;
+    const bool found = mysql_fetch_row(result) != nullptr;
+    mysql_free_result(result);
+    return found;
 }

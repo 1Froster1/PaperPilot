@@ -4,8 +4,10 @@ from typing import TypedDict
 
 from app.schemas import (
     Citation,
+    ExternalReference,
     PaperChatRequest,
     ToolTrace,
+    WebSource,
 )
 
 
@@ -18,7 +20,13 @@ class PaperAgentState(TypedDict, total=False):
     internal_citations: list[Citation]
 
     # 本轮 MCP/OpenAlex 得到的外部文献。
-    external_references: list[dict]
+    external_references: list[ExternalReference]
+
+    # 本轮 Tavily 得到的网页资料。
+    web_sources: list[WebSource]
+
+    # Coordinator 决定本轮需要哪些研究来源。
+    research_plan: list[str]
 
     # 所有 Agent 的工具调用记录。
     tool_traces: list[ToolTrace]
