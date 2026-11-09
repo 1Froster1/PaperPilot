@@ -1,39 +1,12 @@
-# PaperPilot · 论文阅读 AI 助手
+# PaperPilot · 论文阅读 AI 助手V1.0
 
 PaperPilot 是一个面向论文阅读场景的桌面应用：导入 PDF 论文后，自动完成结构化解析与向量化索引，支持针对单篇论文的 **RAG 多 Agent 问答、总结、阅读笔记与批判性阅读**，并配套文献管理、笔记与解析任务中心。
 
 ## 系统架构
 
-项目由三个进程协作组成：
+项目由 Qt 桌面端、Drogon 后端与 Python Agent Worker 协作组成：
 
-```
-┌─────────────────────┐         ┌──────────────────────────┐
-│  desktop/           │  HTTP   │  server/                 │
-│  Qt 6 桌面客户端     │ ──────▶ │  Drogon C++ 后端          │
-│  (GUI, 127.0.0.1)   │  JSON   │  :8848                   │
-└─────────────────────┘         │   · 登录 / 文献管理 / 笔记 │
-                                │   · 任务进度 / 会话持久化  │
-                                └───────────┬──────────────┘
-                                            │ HTTP
-                                            ▼
-                 ┌──────────────────────────────────────────┐
-                 │  agent_worker/                           │
-                 │  Python Agent Worker (FastAPI, :8001)    │
-                 │   · GROBID 解析 PDF → 文本块             │
-                 │   · Embedding + Qdrant 向量检索          │
-                 │   · LangGraph 多 Agent 问答              │
-                 └──────┬──────────┬───────────┬────────────┘
-                        │          │           │
-                 ┌──────▼───┐ ┌────▼─────┐ ┌───▼────────┐
-                 │  Qdrant  │ │  GROBID  │ │ LLM /      │
-                 │  向量库   │ │  PDF解析  │ │ Embedding  │
-                 └──────────┘ └──────────┘ └────────────┘
-                                ┌───────────────┐
-                                │  MySQL 8      │  ← 由 Drogon 后端直接读写
-                                │  (database/   │
-                                │   schema.sql) │
-                                └───────────────┘
-```
+![PaperPilot 系统架构](docs/images/paperpilot-architecture.png)
 
 **职责边界**：Drogon 后端负责鉴权、业务接口与 MySQL 持久化；Python Worker 只负责 PDF 解析、向量索引与 Agent 问答，不直接访问 MySQL。
 
@@ -44,7 +17,7 @@ PaperPilot 是一个面向论文阅读场景的桌面应用：导入 PDF 论文�
 - **登录**：账号/密码登录（`/api/auth/login`）
 - **论文库**：按关键词 / 领域 / 年份 / 排序筛选论文，卡片式列表，收藏星标，详情页展示摘要与标签
 - **PDF 导入**：multipart 流式上传，上传后每 2 秒轮询解析进度，侧边栏任务卡片实时展示
-- **AI 对话**：气泡式聊天界面，支持四种模式 —— 论文问答（qa）/ 论文总结（summary）/ 阅读笔记（note）/ 批判性阅读（critique），回答带 `【证据 n】` 引用标注
+- **AI 对话**：气泡式聊天界面，支持四种模式 —— 论文问答（qa）/ 论文总结（summary）/ 阅读笔记（note）/ 批判性阅读（critique）；支持论文证据、外部学术文献与网页来源引用
 - **阅读笔记**：论文笔记的新建 / 编辑 / 删除
 - **任务中心**：解析任务的进度、状态与结果列表（自动刷新）
 
@@ -82,12 +55,12 @@ PaperPilot 是一个面向论文阅读场景的桌面应用：导入 PDF 论文�
 PDF → GROBID(TEI XML) 解析分块 → Drogon 存入 MySQL paper_chunks
     → /worker/index-paper → DashScope text-embedding-v3（1024 维）→ Qdrant
     → 提问 → 同模型编码问题 → 按 paper_id 过滤检索 Top-K 证据
-    → LangGraph 多 Agent（coordinator → researcher → writer）→ 带引用的回答
+    → LangGraph 多 Agent（coordinator → Qdrant / OpenAlex / Web researchers → writer）→ 带引用的回答
 ```
 
-- **多 Agent 协作**（`app/multi_agent/`，LangGraph）：coordinator 初始化状态 → researcher 检索本轮证据 → writer 依据证据生成回答；回答经 `answer_validator` 校验 `【证据 n】` 引用编号，无证据时拒绝编造
-- **证据约束**：只依据当前论文的检索证据回答，每个事实性结论必须标注证据编号，默认中文
-- **可选增强**：`mcp_servers/openalex_server.py` 提供 OpenAlex 学术检索 MCP 工具（stdio），失败时自动降级，不影响论文内问答
+- **多 Agent 协作**（`app/multi_agent/`，LangGraph）：Coordinator 按问题路由当前论文检索、OpenAlex 学术检索与 Tavily 网络检索；Writer 按模式生成回答并保留来源编号
+- **证据约束**：当前论文证据标为 `【证据 n】`，外部学术文献标为 `【外部文献 n】`，网页资料标为 `【网页来源 n】`；无材料时拒绝编造
+- **MCP 外部知识增强**：`mcp_servers/openalex_server.py` 提供 OpenAlex 学术检索，`mcp_servers/web_search_server.py` 提供 Tavily 网络检索；任一外部工具失败不会影响论文内问答
 
 ### 数据库（`database/`）
 
@@ -109,7 +82,7 @@ PaperPilot/
 ├── agent_worker/     Python Agent Worker（:8001）
 │   ├── app/          FastAPI 应用、RAG 检索、向量服务、多 Agent（LangGraph）
 │   ├── app/test/     本地调试 / 冒烟脚本
-│   └── mcp_servers/  OpenAlex MCP stdio 服务器
+│   └── mcp_servers/  OpenAlex / Tavily MCP stdio 服务器
 └── database/         MySQL 8 建表脚本与说明
 ```
 
@@ -207,7 +180,7 @@ cmake --build build --config Debug
 
 ## 注意事项
 
-- 本项目为个人学习/演示项目：登录接口为明文密码比对、部分 SQL 为字符串拼接，生产环境应改用密码哈希 + Session/JWT + 参数化查询（代码中已注明）。
+- 本项目为个人学习项目。
 - 所有服务默认仅监听/访问 `127.0.0.1`，端口：桌面端→后端 8848，后端→Worker 8001，Qdrant 6335，GROBID 8070。
 - 向量索引可随时由 MySQL 中的 `paper_chunks` 重建，Qdrant 不是唯一事实源。
-- 上传的 PDF 保存在 `server/uploads/`（运行时数据，已被 `.gitignore` 忽略）。
+- 上传的 PDF 保存在 `server/uploads/`。
